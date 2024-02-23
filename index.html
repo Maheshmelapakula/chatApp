@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat</title>
+  <style>
+   body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #fafafa;
+}
+
+.chat-box {
+  width: 400px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+#user-info {
+  padding: 10px;
+  background-color: #009688; /* Instagram green color */
+  color: #fff;
+  text-align: center;
+}
+
+#messages {
+  list-style-type: none;
+  margin: 0;
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+#messages li {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #fafafa; /* Light gray background */
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#messages li:nth-child(odd) {
+  background-color: #e0e0e0; /* Alternate color for better readability */
+}
+
+#form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 10px;
+  border-top: 1px solid #ddd; /* Light gray border */
+}
+
+#m {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 3px;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+button {
+  padding: 8px 16px;
+  background-color: #009688; /* Instagram green color */
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #00796b; /* Darker shade on hover */
+}
+
+#feedback {
+  color: #777;
+  margin-top: 5px;
+}
+
+  </style>
+</head>
+<body>
+  <ul id="messages"></ul>
+  <form id="form" action="">
+    <input id="m" autocomplete="on" placeholder="Type your message..." />
+    <button>Send</button>
+  </form>
+  <div id="feedback"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const form = document.querySelector('form');
+    const input = document.querySelector('#m');
+    const messages = document.querySelector('#messages');
+    const feedback = document.querySelector('#feedback');
+    const TYPING_TIMER = 300; // milliseconds
+
+    const nickname = prompt("Enter your nickname:");
+    socket.emit('set nickname', nickname);
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (input.value.trim() !== "") {
+        const msg = input.value;
+        socket.emit('chat message', msg);
+        input.value = '';
+      }
+    });
+
+    input.addEventListener('input', () => {
+      if (input.value.trim() !== "") {
+        socket.emit('typing');
+      }
+    });
+
+    socket.on('chat message', function(data) {
+      appendMessage(data);
+    });
+
+    socket.on('user joined', function(message) {
+      appendMessage({ message });
+    });
+
+    socket.on('user left', function(message) {
+      appendMessage({ message });
+    });
+
+    socket.on('typing', (user) => {
+      feedback.textContent = `${user} is typing...`;
+      lastTypingTime = new Date().getTime();
+      setTimeout(() => {
+        const currentTime = new Date().getTime();
+        if (currentTime - lastTypingTime >= TYPING_TIMER) {
+          feedback.textContent = '';
+        }
+      }, TYPING_TIMER);
+    });
+
+    function appendMessage(data) {
+      const item = document.createElement('li');
+      const prefix = (data.id === socket.id) ? 'You' : data.nickname;
+      item.textContent = `${prefix}: ${data.message}`;
+      messages.appendChild(item);
+    }
+  </script>
+</body>
+</html>
